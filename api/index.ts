@@ -54,32 +54,9 @@ function initLocalFiles() {
 
 initLocalFiles();
 
-// ==========================================
-// PostgreSQL - DISABLED FOR MOCKUP ONLY
-// ==========================================
-const PG_HOST = process.env.PG_HOST || '10.200.10.2';
-const PG_PORT = Number(process.env.PG_PORT) || 5432;
-const PG_USER = process.env.PG_USER || 'dev_admin';
-const PG_PASSWORD = process.env.PG_PASSWORD || 'it240';
-const PG_DB_PC_ASSET = process.env.PG_DATABASE_PC_ASSET || 'pc_asset';
-const PG_DB_DATA_CENTER = process.env.PG_DATABASE_DATA_CENTER || 'data_center';
-
-// Force mockup mode - skip PostgreSQL connection
-let pcAssetPool: pg.Pool | null = null;
-let dataCenterPool: pg.Pool | null = null;
+// Force mockup mode
 let isPgConnected = false;
-let isDataCenterConnected = false;
-let pgConnectionError: string | null = null;
-let dataCenterConnectionError: string | null = null;
-
-async function connectPostgreSQL() {
-  // Skip PostgreSQL connection - use mockup only
-  console.log('Mockup mode: Skipping PostgreSQL connection, using local JSON files');
-  isPgConnected = false;
-  pgConnectionError = 'Mockup mode - PostgreSQL disabled';
-}
-
-connectPostgreSQL();
+let pgConnectionError: string | null = 'Mockup mode - PostgreSQL disabled';
 
 // ==========================================
 // Helpers
@@ -89,12 +66,6 @@ function getClientIp(req: express.Request): string | null {
     || req.ip
     || req.socket.remoteAddress
     || null;
-}
-
-function getActorUsername(req: express.Request): string {
-  const header = req.headers['x-current-user'];
-  if (typeof header === 'string' && header.trim()) return header.trim();
-  return 'system';
 }
 
 function normalizeRecord(d: any) {
@@ -128,43 +99,6 @@ function normalizeRecord(d: any) {
 async function validateYanheeUser(username: string, password: string): Promise<{ id: number; username: string } | null> {
   const unameLower = username.toLowerCase();
 
-  if (isPgConnected && pcAssetPool) {
-    try {
-      const fdwResult = await pcAssetPool.query(
-        `SELECT id_user, username, password FROM v_users WHERE LOWER(username) = LOWER($1) LIMIT 1`,
-        [username]
-      );
-      if (fdwResult.rows.length > 0) {
-        const u = fdwResult.rows[0];
-        if (String(u.password) === password) {
-          return { id: u.id_user, username: u.username };
-        }
-        return null;
-      }
-    } catch {
-      // v_users อาจยังไม่มี — ลอง data_center ตรง
-    }
-  }
-
-  if (isDataCenterConnected && dataCenterPool) {
-    try {
-      const dcResult = await dataCenterPool.query(
-        `SELECT id_user, username, password FROM tb_user_yanhee
-         WHERE LOWER(username) = LOWER($1) AND COALESCE(status_user, '1') = '1' LIMIT 1`,
-        [username]
-      );
-      if (dcResult.rows.length > 0) {
-        const u = dcResult.rows[0];
-        if (String(u.password) === password) {
-          return { id: u.id_user, username: u.username };
-        }
-        return null;
-      }
-    } catch (e: any) {
-      console.error('data_center yanhee lookup error:', e.message);
-    }
-  }
-
   const sandboxPass = SANDBOX_YANHEE_PASSWORDS[unameLower];
   if (sandboxPass && sandboxPass === password) {
     const authList = JSON.parse(fs.readFileSync(LOCAL_AUTH_FILE, 'utf-8'));
@@ -176,16 +110,6 @@ async function validateYanheeUser(username: string, password: string): Promise<{
 }
 
 async function getAppRole(username: string): Promise<string | null> {
-  if (isPgConnected && pcAssetPool) {
-    try {
-      const result = await pcAssetPool.query(
-        `SELECT role FROM authentication WHERE LOWER(username) = LOWER($1) AND del_flag = 0`,
-        [username]
-      );
-      if (result.rows.length > 0) return result.rows[0].role;
-    } catch { /* fallback */ }
-  }
-
   const authList = JSON.parse(fs.readFileSync(LOCAL_AUTH_FILE, 'utf-8'));
   const appUser = authList.find(
     (u: any) => u.username.toLowerCase() === username.toLowerCase() && u.del_flag === 0
@@ -197,31 +121,21 @@ async function getAppRole(username: string): Promise<string | null> {
 // API Routes
 // ==========================================
 app.get('/api/db-status', async (_req, res) => {
-  let fdwReady = false;
-  if (isPgConnected && pcAssetPool) {
-    try {
-      await pcAssetPool.query('SELECT 1 FROM v_departments LIMIT 1');
-      fdwReady = true;
-    } catch { /* ignore */ }
-  }
-
   res.json({
     connected: isPgConnected,
-    host: PG_HOST,
-    database: PG_DB_PC_ASSET,
-    dataCenterConnected: isDataCenterConnected || fdwReady,
-    dataCenterDatabase: PG_DB_DATA_CENTER,
-    fdwReady,
+    host: 'mockup',
+    database: 'mockup',
+    dataCenterConnected: false,
+    dataCenterDatabase: 'mockup',
+    fdwReady: false,
     error: pgConnectionError,
-    dataCenterError: dataCenterConnectionError,
-    fallbackActive: !isPgConnected
+    dataCenterError: null,
+    fallbackActive: true
   });
 });
 
 app.post('/api/auth/login', async (req, res) => {
   const { username, password } = req.body;
-  const clientIp = getClientIp(req);
-  const userAgent = req.get('user-agent') || null;
 
   if (!username || !password) {
     return res.status(400).json({ success: false, message: 'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน' });
@@ -243,7 +157,7 @@ app.post('/api/auth/login', async (req, res) => {
 
   return res.json({
     success: true,
-    message: isPgConnected ? 'เข้าสู่ระบบสำเร็จ (PostgreSQL)' : 'เข้าสู่ระบบสำเร็จ (Sandbox)',
+    message: 'เข้าสู่ระบบสำเร็จ (Sandbox)',
     user: { id: yanheeUser.id, username: yanheeUser.username, role }
   });
 });
@@ -253,25 +167,6 @@ app.post('/api/auth/logout', async (_req, res) => {
 });
 
 app.get('/api/departments', async (_req, res) => {
-  if (isPgConnected && pcAssetPool) {
-    try {
-      const result = await pcAssetPool.query(
-        `SELECT id, dept_code, dept_name FROM v_departments ORDER BY dept_name`
-      );
-      return res.json({
-        success: true,
-        departments: result.rows.map((r: any) => ({
-          id: r.id,
-          code: r.dept_code,
-          name: r.dept_name
-        })),
-        source: 'PostgreSQL'
-      });
-    } catch (e: any) {
-      console.error('Departments query failed:', e.message);
-    }
-  }
-
   try {
     const raw = fs.readFileSync(LOCAL_ASSETS_FILE, 'utf-8');
     const depts = [...new Set(JSON.parse(raw).map((a: any) => a.dept).filter(Boolean))].sort();
@@ -286,21 +181,6 @@ app.get('/api/departments', async (_req, res) => {
 });
 
 app.get('/api/assets', async (_req, res) => {
-  if (isPgConnected && pcAssetPool) {
-    try {
-      const result = await pcAssetPool.query(
-        `SELECT * FROM master_list WHERE del_flag = 0 ORDER BY id DESC`
-      );
-      return res.json({
-        success: true,
-        records: result.rows.map(normalizeRecord),
-        source: 'PostgreSQL'
-      });
-    } catch (e: any) {
-      console.error('Assets query failed:', e.message);
-    }
-  }
-
   try {
     const records = JSON.parse(fs.readFileSync(LOCAL_ASSETS_FILE, 'utf-8')).map(normalizeRecord);
     return res.json({ success: true, records, source: 'Local Sandbox' });
@@ -309,10 +189,11 @@ app.get('/api/assets', async (_req, res) => {
   }
 });
 
-// Health check
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Export for Vercel
-export default app;
+// Vercel serverless handler
+export default function handler(req: any, res: any) {
+  app(req, res);
+}
