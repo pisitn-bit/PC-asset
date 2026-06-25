@@ -55,7 +55,7 @@ function initLocalFiles() {
 initLocalFiles();
 
 // ==========================================
-// PostgreSQL
+// PostgreSQL - DISABLED FOR MOCKUP ONLY
 // ==========================================
 const PG_HOST = process.env.PG_HOST || '10.200.10.2';
 const PG_PORT = Number(process.env.PG_PORT) || 5432;
@@ -64,16 +64,7 @@ const PG_PASSWORD = process.env.PG_PASSWORD || 'it240';
 const PG_DB_PC_ASSET = process.env.PG_DATABASE_PC_ASSET || 'pc_asset';
 const PG_DB_DATA_CENTER = process.env.PG_DATABASE_DATA_CENTER || 'data_center';
 
-const pgBaseConfig: pg.PoolConfig = {
-  host: PG_HOST,
-  port: PG_PORT,
-  user: PG_USER,
-  password: PG_PASSWORD,
-  max: 15,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 5000
-};
-
+// Force mockup mode - skip PostgreSQL connection
 let pcAssetPool: pg.Pool | null = null;
 let dataCenterPool: pg.Pool | null = null;
 let isPgConnected = false;
@@ -82,35 +73,10 @@ let pgConnectionError: string | null = null;
 let dataCenterConnectionError: string | null = null;
 
 async function connectPostgreSQL() {
-  try {
-    console.log(`Connecting PostgreSQL pc_asset @ ${PG_HOST}:${PG_PORT}...`);
-    pcAssetPool = new pg.Pool({ ...pgBaseConfig, database: PG_DB_PC_ASSET });
-    await pcAssetPool.query('SELECT 1');
-    isPgConnected = true;
-    pgConnectionError = null;
-    console.log(` SUCCESS: pc_asset connected (${PG_DB_PC_ASSET})`);
-  } catch (err: any) {
-    pcAssetPool = null;
-    isPgConnected = false;
-    pgConnectionError = err.message;
-    console.warn(` WARNING: pc_asset failed — ${err.message}`);
-    console.warn(' Falling back to local JSON persistence.');
-  }
-
-  try {
-    console.log(`Connecting PostgreSQL data_center @ ${PG_HOST}:${PG_PORT}...`);
-    dataCenterPool = new pg.Pool({ ...pgBaseConfig, database: PG_DB_DATA_CENTER });
-    await dataCenterPool.query('SELECT 1');
-    isDataCenterConnected = true;
-    dataCenterConnectionError = null;
-    console.log(` SUCCESS: data_center connected (${PG_DB_DATA_CENTER})`);
-  } catch (err: any) {
-    dataCenterPool = null;
-    isDataCenterConnected = false;
-    dataCenterConnectionError = err.message;
-    console.warn(` WARNING: data_center failed — ${err.message}`);
-    console.warn(' Master data (แผนก/ผู้ใช้) จะใช้ FDW ใน pc_asset หรือ sandbox');
-  }
+  // Skip PostgreSQL connection - use mockup only
+  console.log('Mockup mode: Skipping PostgreSQL connection, using local JSON files');
+  isPgConnected = false;
+  pgConnectionError = 'Mockup mode - PostgreSQL disabled';
 }
 
 connectPostgreSQL();
