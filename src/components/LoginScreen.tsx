@@ -46,10 +46,32 @@ export default function LoginScreen({ onLoginSuccess, dbStatus }: LoginScreenPro
     }
   };
 
-  const handleQuickLogin = (uname: string, pass: string) => {
+  const handleQuickLogin = async (uname: string, pass: string) => {
     setUsername(uname);
     setPassword(pass);
     setErrorMsg(null);
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: uname, password: pass })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        handleLoginSuccess({
+          id: data.user.id,
+          username: data.user.username,
+          role: (data.user.role || 'user') as UserRole
+        });
+      } else {
+        setError(data.message || 'รหัสผ่านหรือชื่อผู้ใช้ไม่ถูกต้อง');
+      }
+    } catch (err) {
+      console.error('Quick login error:', err);
+      setError('ไม่สามารถเชื่อมต่อส่วนหลังเซิร์ฟเวอร์ได้');
+    }
   };
 
   const setError = (msg: string) => {
