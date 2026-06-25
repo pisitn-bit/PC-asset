@@ -219,7 +219,7 @@ export default function LoginScreen({ onLoginSuccess, dbStatus }: LoginScreenPro
             </form>
 
             {/* Quick login assistants */}
-            {/* <div className="mt-6 pt-5 border-t border-slate-800">
+            <div className="mt-6 pt-5 border-t border-slate-800">
               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block text-center mb-2">บัญชีสาธิตด่วน</span>
               <div className="space-y-1.5">
                 <button
@@ -239,7 +239,7 @@ export default function LoginScreen({ onLoginSuccess, dbStatus }: LoginScreenPro
                   <span className="text-[9px] text-blue-500 font-mono">yanhee@inter.454</span>
                 </button>
               </div>
-            </div> */}
+            </div>
 
             {/* Simulated Native Home bar indicator */}
             <div className="w-20 h-1 bg-slate-700 mx-auto rounded-full mt-6 mb-1"></div>
