@@ -1,0 +1,6 @@
+{
+  "name": "IT MasterList PC Asset Manager",
+  "description": "IT MasterList PC Asset Manager built with React TypeScript, featuring real-time dashboards, quick filters, detail cards, and an integrated login screen. Powered by Microsoft SQL Server.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

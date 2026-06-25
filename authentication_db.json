@@ -1,0 +1,20 @@
+[
+  {
+    "id": 1,
+    "username": "admin",
+    "password": "password123",
+    "del_flag": 0
+  },
+  {
+    "id": 2,
+    "username": "user",
+    "password": "yanhee@123",
+    "del_flag": 0
+  },
+  {
+    "id": 3,
+    "username": "it_staff",
+    "password": "yanhee@inter.454",
+    "del_flag": 0
+  }
+]
