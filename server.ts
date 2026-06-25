@@ -1957,14 +1957,21 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log('==================================================');
-    console.log(' IT MasterList Backend — PostgreSQL');
-    console.log(` Serving: http://0.0.0.0:${PORT}`);
-    console.log(` pc_asset:     ${isPgConnected ? 'OK' : 'FALLBACK'}`);
-    console.log(` data_center:  ${isDataCenterConnected ? 'OK' : 'N/A'}`);
-    console.log('==================================================');
-  });
+  // Only listen if not running on Vercel
+  if (!process.env.VERCEL) {
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log('==================================================');
+      console.log(' IT MasterList Backend — PostgreSQL');
+      console.log(` Serving: http://0.0.0.0:${PORT}`);
+      console.log(` pc_asset:     ${isPgConnected ? 'OK' : 'FALLBACK'}`);
+      console.log(` data_center:  ${isDataCenterConnected ? 'OK' : 'N/A'}`);
+      console.log('==================================================');
+    });
+  }
 }
 
+// Export for Vercel
+export default app;
+
+// Start server locally
 startServer();
